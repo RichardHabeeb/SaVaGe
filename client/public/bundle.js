@@ -24,18 +24,17 @@ module.exports = (function (){
     return Game;
 })();
 
-},{"./Settings.js":4,"jquery":5}],2:[function(require,module,exports){
+},{"./Settings.js":4,"jquery":6}],2:[function(require,module,exports){
 window.jQuery = $ = require('jquery');
 var Game = require("./Game.js");
 var Settings = require("./Settings.js");
 var Server = require("./Server.js");
+var NewPlayer = require("../../messages/NewPlayer.js");
 
 window.onload = function() {
     var previousTimeStamp = null;
-
+    var server = null;
     var game = new Game($("body"));
-    var server = new Server("ws://localhost/");
-
     var loop = function(timeStamp) {
         if(!previousTimeStamp) previousTimeStamp = timeStamp;
         var elapsedTimeSeconds = (timeStamp - previousTimeStamp) / 1000.0;
@@ -46,26 +45,32 @@ window.onload = function() {
         previousTimeStamp = timeStamp;
         window.requestAnimationFrame(loop);
     };
-    window.requestAnimationFrame(loop);
+
+    server = new Server(Settings.serverUri, function () {
+        server.send(new NewPlayer());
+        window.requestAnimationFrame(loop);
+    });
+
 };
 
-},{"./Game.js":1,"./Server.js":3,"./Settings.js":4,"jquery":5}],3:[function(require,module,exports){
+},{"../../messages/NewPlayer.js":5,"./Game.js":1,"./Server.js":3,"./Settings.js":4,"jquery":6}],3:[function(require,module,exports){
 module.exports = (function (){
     window.jQuery = $ = require('jquery');
 
-    var Server = function(uri) {
+    var Server = function(uri, connectedCallback) {
         this._websocket = new WebSocket(uri, 'echo-protocol');
 
         this._websocket.onopen = function(evt) {
-            console.log("Connecting to " + uri);
+            console.log("Connected to " + uri);
+            connectedCallback();
         };
 
         this._websocket.onclose = function(evt) {
-            console.log("Disconnecting");
+            console.log("Disconnected.");
         };
 
         this._websocket.onmessage = function(evt) {
-            console.log(evt);
+            console.log(JSON.parse(evt.data));
         };
 
         this._websocket.onerror = function(evt) {
@@ -73,32 +78,42 @@ module.exports = (function (){
         };
     };
 
-    Server.prototype.send = function() {
-
-    };
-
-    Server.prototype.update = function() {
-
-    };
-
-    Server.prototype.render = function() {
-
+    Server.prototype.send = function(m) {
+        if(this._websocket.readyState === 1) {
+            this._websocket.send(JSON.stringify(m));
+        } else {
+            console.log("Websocket not connected: ", this._websocket.readyState);
+        }
     };
 
     return Server;
 })();
 
-},{"jquery":5}],4:[function(require,module,exports){
+},{"jquery":6}],4:[function(require,module,exports){
 module.exports = (function (){
     return {
         window: {
             width: 1000,
             height: 700,
-        }
+        },
+        serverUri: "ws://localhost/"
     };
 })();
 
 },{}],5:[function(require,module,exports){
+module.exports = (function (){
+    return function() {
+        var NewPlayer = {};
+
+        NewPlayer.x = 0;
+        NewPlayer.y = 0;
+        NewPlayer.id = 0;
+
+        return NewPlayer;
+    };
+})();
+
+},{}],6:[function(require,module,exports){
 /*!
  * jQuery JavaScript Library v2.1.4
  * http://jquery.com/
@@ -9310,4 +9325,4 @@ return jQuery;
 
 }));
 
-},{}]},{},[1,2,3,4]);
+},{}]},{},[1,2,3,4,5]);
